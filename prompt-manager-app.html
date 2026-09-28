@@ -1,0 +1,2374 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Manager - Gestione Prompts</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Prompt Manager">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        :root {
+            /* Light mode colors */
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b92a9;
+            --success: #10b981;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-hover: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+            --bg-prompt: #f8fafc;
+            --bg-input: #ffffff;
+            --modal-bg: rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="dark"] {
+            /* Dark mode colors */
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --secondary: #6b7280;
+            --success: #34d399;
+            --bg-main: #111827;
+            --bg-card: #1f2937;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --border: #374151;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+            --shadow-hover: 0 10px 20px rgba(0,0,0,0.4), 0 6px 6px rgba(0,0,0,0.5);
+            --bg-prompt: #374151;
+            --bg-input: #374151;
+            --modal-bg: rgba(0, 0, 0, 0.8);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--bg-card);
+            box-shadow: var(--shadow);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 50px;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .sidebar {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 20px;
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 100px;
+        }
+
+        .sidebar h2 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .category-nav {
+            list-style: none;
+        }
+
+        .category-item {
+            margin-bottom: 5px;
+        }
+
+        .category-link {
+            display: block;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .category-link:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .category-link.active {
+            background: var(--primary);
+            color: white;
+            font-weight: 500;
+        }
+
+        .sidebar .external-links-title {
+            margin-top: 30px;
+        }
+
+        .main-content {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .search-bar {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 15px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        .search-bar::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+        }
+
+        .btn-secondary:hover {
+            background: #6b7280;
+        }
+
+        .category-section {
+            margin-bottom: 40px;
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .category-title {
+            color: var(--primary);
+            font-size: 1.4rem;
+        }
+
+        .prompt-card {
+            background: var(--bg-prompt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .prompt-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .prompt-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .prompt-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .favorite-btn {
+            transition: all 0.3s ease;
+        }
+
+        .favorite-btn.favorited {
+            background: #fbbf24;
+            color: white;
+            border-color: #fbbf24;
+        }
+
+        .favorite-btn:hover {
+            background: #fbbf24;
+            color: white;
+            border-color: #fbbf24;
+        }
+
+        .prompt-content {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .prompt-content.expanded {
+            max-height: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--modal-bg);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-textarea {
+            min-height: 150px;
+            resize: vertical;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .backup-reminder {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+        }
+
+        .backup-reminder[hidden] {
+            display: none;
+        }
+
+        .backup-reminder span {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        [data-theme="dark"] .backup-reminder {
+            background: #451a03;
+            color: #fde68a;
+            border-color: #92400e;
+        }
+
+        /* Overlay: finestra compatta sempre in primo piano (usa gli stessi stili dell'app) */
+        .overlay {
+            padding: 12px;
+        }
+
+        .overlay-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin: 8px 0;
+        }
+
+        .overlay-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .overlay-label {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+
+        .overlay-box {
+            margin-bottom: 12px;
+        }
+
+        .overlay-box .form-textarea {
+            min-height: 90px;
+        }
+
+        .overlay-empty {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        /* Focus styles per keyboard navigation */
+        button:focus,
+        input:focus,
+        select:focus,
+        textarea:focus,
+        .category-link:focus,
+        .action-btn:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        /* Skip links */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 1001;
+            transition: top 0.3s;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Keyboard help */
+        .keyboard-help {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            max-width: 250px;
+        }
+        
+        .keyboard-help.show {
+            opacity: 1;
+        }
+        
+        /* Modal focus trap */
+        .modal.active .modal-content {
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+                margin-bottom: 20px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .main-content {
+                padding: 15px;
+            }
+
+            .prompt-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .category-header {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .search-bar {
+                min-width: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- PWA Install Button -->
+    <div id="pwa-install" style="position: fixed; top: 20px; left: 20px; z-index: 1001; display: none;">
+        <button onclick="installPWA()" style="
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        " title="Installa Prompt Manager come app">
+            📱 Installa App
+        </button>
+    </div>
+
+    <a href="#main-content" class="skip-link">Salta al contenuto principale</a>
+    
+    <header role="banner">
+        <div class="header-content">
+            <h1>📝 Prompt Manager</h1>
+            <div>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Cambia tema" aria-label="Cambia tema">
+                    <span id="theme-icon" aria-hidden="true">🌙</span>
+                    <span id="theme-text">Dark</span>
+                </button>
+                <button class="btn btn-secondary" onclick="openOverlay()" title="Finestra sempre in primo piano con preferiti e box di testo">📌 Overlay</button>
+                <button class="btn btn-secondary" onclick="exportData()">📥 Esporta</button>
+                <button class="btn btn-secondary" onclick="importData()">📤 Importa</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="layout">
+            <aside class="sidebar">
+                <h2>Categorie</h2>
+                <ul class="category-nav" id="categoryNav">
+                    <!-- Categorie dinamiche -->
+                </ul>
+                <button class="btn" style="width: 100%; margin-top: 20px;" onclick="openAddCategoryModal()">
+                    + Nuova Categoria
+                </button>
+
+                <!-- Raccolte pubbliche da cui prendere spunto: si aprono in una nuova scheda -->
+                <h2 class="external-links-title">Librerie di prompt</h2>
+                <ul class="category-nav">
+                    <li class="category-item"><a class="category-link" href="https://github.com/f/prompts.chat" target="_blank" rel="noopener" title="La raccolta pubblica di prompt più grande">prompts.chat ↗</a></li>
+                    <li class="category-item"><a class="category-link" href="https://github.com/MrXie23/PromptLibrary" target="_blank" rel="noopener" title="Prompt in più lingue, divisi per categoria">PromptLibrary ↗</a></li>
+                    <li class="category-item"><a class="category-link" href="https://github.com/The-Focus-AI/prompt-library" target="_blank" rel="noopener" title="Libreria di prompt con PWA e CLI">The Focus AI ↗</a></li>
+                    <li class="category-item"><a class="category-link" href="https://github.com/thibaultyou/prompt-library" target="_blank" rel="noopener" title="Prompt curati da eseguire da riga di comando">prompt-library ↗</a></li>
+                    <li class="category-item"><a class="category-link" href="https://github.com/hhkaos/biblioteca-de-prompts-para-estudiar-con-ia" target="_blank" rel="noopener" title="Prompt per studiare con l'IA (in spagnolo)">Prompt per studiare ↗</a></li>
+                </ul>
+            </aside>
+
+            <main class="main-content" id="main-content" role="main">
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Totale Prompt</div>
+                        <div class="stat-value" id="totalPrompts">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Categorie</div>
+                        <div class="stat-value" id="totalCategories">0</div>
+                    </div>
+                </div>
+
+                <div class="backup-reminder" id="backupReminder" hidden>
+                    <span id="backupReminderText"></span>
+                    <button class="btn" onclick="exportData()">📥 Esporta ora</button>
+                    <button class="close-modal" onclick="document.getElementById('backupReminder').hidden = true" aria-label="Chiudi promemoria">&times;</button>
+                </div>
+
+                <div class="controls">
+                    <input type="text" class="search-bar" id="searchBar" placeholder="🔍 Cerca prompt...">
+                    <button class="btn" onclick="openAddPromptModal()">+ Aggiungi Prompt</button>
+                </div>
+
+                <div id="promptsContainer">
+                    <!-- Prompt dinamici -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Aggiungi Prompt -->
+    <div class="modal" id="addPromptModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Aggiungi Nuovo Prompt</h2>
+                <button class="close-modal" onclick="closeModal('addPromptModal')">&times;</button>
+            </div>
+            <form id="addPromptForm">
+                <div class="form-group">
+                    <label class="form-label">Titolo</label>
+                    <input type="text" class="form-input" id="promptTitle" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select" id="promptCategory" required>
+                        <!-- Opzioni dinamiche -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contenuto Prompt</label>
+                    <textarea class="form-textarea" id="promptContent" required></textarea>
+                </div>
+                <button type="submit" class="btn">Salva Prompt</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Modifica Prompt -->
+    <div class="modal" id="editPromptModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Modifica Prompt</h2>
+                <button class="close-modal" onclick="closeModal('editPromptModal')">&times;</button>
+            </div>
+            <form id="editPromptForm">
+                <input type="hidden" id="editPromptId">
+                <div class="form-group">
+                    <label class="form-label">Titolo</label>
+                    <input type="text" class="form-input" id="editPromptTitle" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select" id="editPromptCategory">
+                        <!-- Opzioni dinamiche -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contenuto Prompt</label>
+                    <textarea class="form-textarea" id="editPromptContent" required></textarea>
+                </div>
+                <button type="submit" class="btn">Salva Modifiche</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Aggiungi Categoria -->
+    <div class="modal" id="addCategoryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Aggiungi Nuova Categoria</h2>
+                <button class="close-modal" onclick="closeModal('addCategoryModal')">&times;</button>
+            </div>
+            <form id="addCategoryForm">
+                <div class="form-group">
+                    <label class="form-label">Nome Categoria</label>
+                    <input type="text" class="form-input" id="categoryName" required>
+                </div>
+                <button type="submit" class="btn">Crea Categoria</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <input type="file" id="importFile" style="display: none;" accept=".json">
+
+    <script>
+        // Dati iniziali dal documento
+        const initialData = {
+            categories: [
+                { id: 'start', name: 'Start Here' },
+                { id: 'research', name: 'Research' },
+                { id: 'data-analysis', name: 'Data Analysis' },
+                { id: 'study', name: 'Study' },
+                { id: 'approfondimento', name: 'Approfondimento' },
+                { id: 'creative', name: 'Creative / Image Generation' },
+                { id: 'work', name: 'Work' }
+            ],
+            prompts: [
+                {
+                    id: 1,
+                    category: 'start',
+                    title: 'Framework CRAAFTED',
+                    content: `Per strutturare prompt completi ed efficaci, il framework CRAAFTED è un modello riconosciuto e ampiamente utilizzato. Ogni lettera dell'acronimo CRAAFTED rappresenta un componente essenziale da includere nel prompt per massimizzare l'utilità dell'output:
+
+Context (Contesto): La situazione o lo scenario generale della richiesta. "Sto preparando l'esame di Storia Moderna, focalizzandomi sul periodo della Rivoluzione Francese."
+Role (Ruolo): La persona o la prospettiva che l'AI deve assumere. "Agisci come un professore universitario specializzato in storia."
+Assignment (Compito): L'azione specifica che l'AI deve eseguire. "Identifica i 3 eventi chiave che hanno portato alla Rivoluzione Francese e le loro implicazioni."
+Audience (Pubblico): Chi riceverà o leggerà l'output. "Spiega i concetti in modo che siano comprensibili a uno studente del primo anno di università."
+Format (Formato): Come deve essere strutturata la risposta. "Fornisci la risposta in un elenco puntato con brevi spiegazioni per ogni punto."
+Tone (Tono): Il tipo di sentimento o stile che l'output deve esprimere. "Mantieni un tono accademico ma conciso."
+Exemplar (Esempio): Un campione o esempio di output desiderato. "Ecco un esempio di come vorrei che fossero strutturati gli appunti: [Fornisci un breve esempio di appunti ben strutturati]."
+Details (Dettagli): Elementi specifici o requisiti aggiuntivi da includere/escludere. "Non includere dettagli minori sulle battaglie, concentrati sulle cause socio-economiche."`
+                },
+                {
+                    id: 2,
+                    category: 'research',
+                    title: 'Academic Research Analysis',
+                    content: `You are an academic researcher tasked with analyzing and synthesizing scholarly papers. Quantitative linguistic case study. Your response must be structured, precise, and evidence-based, addressing:
+Title – Concise summary of the analysis.
+Objective & Research Question – Core aim and key question(s). Try to evaluate the null hypothesis and the non-directional alternative hypothesis, the null hypothesis and a directional alternative hypothesis.
+Methodology & Metrics – Design, data sources, evaluation criteria. Describe what kind of variables were used nominal, ordinal, interval and ratio scale of measurement are used. Write out test statistic, the corresponding degrees of freedom and the p-value
+Key Findings – Major results and implications.
+Short suggestions section for further this research analysis.
+Maintain academic rigor, critical insight, and ethical integrity in all analyses.
+Start when I provide the first article. Got it?`
+                },
+                {
+                    id: 3,
+                    category: 'research',
+                    title: 'Academic Research - Concise Version',
+                    content: `Concise Version – Quantitative Linguistic Case Study 
+Role & Task
+You are an academic researcher analyzing quantitative linguistic studies. Your task is to synthesize key aspects of the research with statistical precision and academic rigor while keeping the response concise and structured.
+1. Title
+• Provide a short, clear title summarizing the study.
+2. Objective & Research Question
+• State the core research aim and key question(s).
+• Evaluate: 
+o Null Hypothesis (H₀): No effect or relationship.
+o Alternative Hypothesis (H₁): Directional or non-directional.
+3. Methodology & Metrics
+• Describe the research design (e.g., experimental, corpus-based).
+• Identify variable types: 
+o Nominal, Ordinal, Interval, Ratio.
+• Report key statistical metrics: 
+o Test used, degrees of freedom (df), p-value.
+4. Key Findings
+• Summarize major results concisely.
+• Highlight main implications and study limitations.
+5. Suggestions for Further Research
+• Offer brief recommendations for refining methods, expanding datasets, or improving analysis.
+Start when I provide the first article. Got it?`
+                },
+                {
+                    id: 4,
+                    category: 'data-analysis',
+                    title: 'General Analysis',
+                    content: `Please analyze this CSV file and provide an overview of its contents.`
+                },
+                {
+                    id: 5,
+                    category: 'data-analysis',
+                    title: 'Statistical Analysis',
+                    content: `Calculate the mean, median, and standard deviation for each numerical column in this dataset.`
+                },
+                {
+                    id: 6,
+                    category: 'data-analysis',
+                    title: 'Time-based Analysis',
+                    content: `This data represents monthly sales. Can you analyze the year-over-year growth rate?`
+                },
+                {
+                    id: 7,
+                    category: 'data-analysis',
+                    title: 'Comparative Analysis',
+                    content: `How does the performance of Product A compare to Product B across all metrics?`
+                },
+                {
+                    id: 8,
+                    category: 'data-analysis',
+                    title: 'Predictive Analysis',
+                    content: `Based on this historical data, can you forecast the likely values for the next 3 months?`
+                },
+                {
+                    id: 9,
+                    category: 'data-analysis',
+                    title: 'Segmentation Analysis',
+                    content: `Can you segment the data into distinct groups based on customer purchasing behavior?`
+                },
+                {
+                    id: 10,
+                    category: 'data-analysis',
+                    title: 'Data Quality Analysis',
+                    content: `Check for any missing or inconsistent data in this CSV.`
+                },
+                {
+                    id: 11,
+                    category: 'data-analysis',
+                    title: 'Specific Metric Analysis',
+                    content: `What's our average customer acquisition cost based on this data?`
+                },
+                {
+                    id: 12,
+                    category: 'data-analysis',
+                    title: 'Comprehensive Analysis',
+                    content: `Provide a comprehensive analysis of our sales data, including trends over time, top-performing products, and any correlations between sales and other factors like marketing spend or seasonality.`
+                },
+                {
+                    id: 13,
+                    category: 'data-analysis',
+                    title: 'Data Visualization Analysis',
+                    content: `I've attached a spreadsheet called 'Sales Data 2023'. Can you analyze this data and present the key findings in the following format: 
+1. Executive Summary (2-3 sentences) 
+2. Key Metrics: - Total sales for each quarter - Top-performing product category - Highest growth region 
+3. Trends: - List 3 notable trends, each with a brief explanation 
+4. Recommendations: - Provide 3 data-driven recommendations, each with a brief rationale 
+After the analysis, suggest three types of data visualizations that would effectively communicate these findings.`
+                },
+                {
+                    id: 14,
+                    category: 'data-analysis',
+                    title: 'Visualization Request',
+                    content: `Request a Visualization Explicitly:
+"Can you create a visualization of this data?"
+"Please generate a chart or graph to represent these findings."
+
+Specify the Type of Visualization:
+"Could you create a bar chart showing the sales data by month?"
+"I'd like to see a pie chart of the market share distribution."
+"Can you visualize this time series data in a line graph?"`
+                },
+                {
+                    id: 15,
+                    category: 'data-analysis',
+                    title: 'Data Visualization Specialist',
+                    content: `You are a data visualization specialist tasked with creating a comprehensive multi-panel figure that synthesizes and communicates key study findings with publication-quality precision. Your response must be structured, precise, and evidence-based, addressing the following points:
+
+Title of the research
+Objective & Visualization Questions
+– Clearly define the primary objective of the visualization.
+– Formulate specific research questions such as:
+Methodology & visualization metrics
+– Outline the design approach for the multi-panel figure, specifying the rationale for selecting different graph types (e.g., scatter plots, bar charts, line graphs etc.).
+– Describe how synthetic data or schematic representations will be used where necessary.
+– Detail the inclusion of essential visual elements such as clear axis labels, descriptive titles, comprehensive legends, and informative annotations.
+– Specify any visualization metrics or indicators (e.g., error bars, confidence intervals, p-values) that will be used to convey statistical significance and variability.
+Key visual findings
+– Summarize the major results and insights that the figure should depict.
+– Explain how annotations and graph elements will be leveraged to emphasize statistical significance and interpret the study's outcomes effectively.
+Suggestions for further data visualization analysis
+– Conclude by posing a few reflective questions aimed at enhancing future visual clarity and deeper data analysis.`
+                },
+                {
+                    id: 16,
+                    category: 'data-analysis',
+                    title: 'Interactive Visualization Analysis',
+                    content: `You are a data visualization specialist tasked with analyzing a provided dataset and determining the most effective interactive visualization techniques to highlight the key study findings with publication-quality precision. Your response must be structured, precise, and evidence-based, addressing the following points:
+
+1. Title: Provide a concise title for the study.
+2. Objective & Visualization Questions: Define the primary objective and formulate specific research questions (e.g., "How does AoA relate to GJT Score?").
+3. Methodology & Interactive Visualization Metrics:  
+   - Analyze dataset characteristics (variable types, scales, trends).  
+   - Suggest suitable interactive graphs for Colab with Python (e.g., interactive scatter plots, bar charts, line graphs, histograms, box plots) and explain the rationale behind each, including the use of interactive elements (tooltips, zoom, pan, clickable legends) and statistical indicators (error bars, confidence intervals, p-values).  
+4. Key Visual Findings: Summarize major results and explain how interactive annotations and graph elements will highlight these findings.
+5. Suggestions for Further Analysis: Pose reflective questions to encourage deeper exploration (e.g., "Could an interactive dashboard enhance data exploration?").
+
+Start when I provide the first article. Got it?`
+                },
+                {
+                    id: 17,
+                    category: 'data-analysis',
+                    title: 'Adaptive Visualization Strategy',
+                    content: `You are a data visualization specialist responsible for designing high-quality, publication-ready visualizations that effectively communicate key study findings. Given a dataset, your task is to analyze its structure and characteristics, selecting the most effective interactive visualization techniques using Python in Colab.
+
+Your response must be structured, precise, and adaptive, ensuring the insights, recommendations, and visual elements are tailored to the specific dataset provided.
+
+1. Title of the Research
+• Provide a concise and informative title summarizing the study's focus.
+
+2. Objective & Visualization Questions
+• Clearly define the primary objective of the visualization.
+• Formulate specific research questions to guide the analysis, ensuring they align with the dataset structure.
+
+3. Data Analysis & Visualization Selection
+• Dataset Structure Analysis
+• Adaptive Visualization Strategy
+• Visual Design & Interactive Elements
+
+4. Key Visual Findings
+• Summarize the major insights derived from the visualizations
+
+5. Adaptive Suggestions for Further Analysis
+• Provide context-aware recommendations, dynamically adjusting based on the dataset's characteristics.
+
+Start when I provide the dataset. Got it?`
+                },
+                {
+                    id: 18,
+                    category: 'approfondimento',
+                    title: 'Approfondimento Linguistica',
+                    content: `Sei un ricercatore e sto caricando un file di circa 90 pagine contenente il testo estratto da slide in formato Word del corso di [nome del corso], tenuto da [docenti] presso [università]. Il testo potrebbe contenere simboli strani o anomali dovuti alla conversione da PDF a Word o errori ortografici minimi: questi devono essere predetti o ignorati nell'elaborazione dell'approfondimento. Il contenuto delle slide è fondamentale per lo studio del corso, e include numerosi riferimenti ad autori e studi accademici che rappresentano punti chiave su cui si basa il programma.
+
+Obiettivo dell'approfondimento: l'obiettivo di questa richiesta è ottenere una spiegazione dettagliata, analitica e ben strutturata degli argomenti trattati nelle slide, con un livello accademico magistrale/dottorale, ma mantenendo sempre un linguaggio accessibile e chiaro, che rispetti il background umanistico e linguistico di chi studia la materia. L'elaborazione deve essere costruita in modo progressivo e connesso, seguendo una logica 65% analitica e 35% descrittiva.`
+                },
+                {
+                    id: 19,
+                    category: 'study',
+                    title: 'Slides Presentation',
+                    content: `I need help creating a [10-slide] presentation for [our quarterly sales meeting]. 
+The presentation should cover [our Q2 sales performance, top-selling products, and sales targets for Q3]. Please provide an outline with key points for each slide.`
+                },
+                {
+                    id: 20,
+                    category: 'study',
+                    title: 'Exact-match Questions',
+                    content: `Your response should be in the following format: Explanation: {your explanation for your final answer} Exact Answer: {your succinct, final answer} Confidence: {your confidence score between 0% and 100% for your answer}`
+                },
+                {
+                    id: 21,
+                    category: 'study',
+                    title: 'Multiple-choice Questions',
+                    content: `Your response should be in the following format: Explanation: {your explanation for your answer choice} Answer: {your chosen answer} Confidence: {your confidence score between 0% and 100% for your answer}`
+                },
+                {
+                    id: 22,
+                    category: 'study',
+                    title: 'Verify Answer',
+                    content: `Judge whether the following [response] to [question] is correct or not based on the precise and unambiguous [correct_answer] below. 
+[question]: {question} 
+[response]: {response} 
+Your judgement must be in the format and criteria specified below: 
+extracted_final_answer: The final exact answer extracted from the [response]. Put the extracted answer as 'None' if there is no exact, final answer to extract from the response. 
+[correct_answer]: {correct_answer} 
+reasoning: Explain why the extracted_final_answer is correct or incorrect based on [correct_answer], focusing only on if there are meaningful differences between [correct_answer] and the extracted_final_answer. 
+correct: Answer 'yes' if extracted_final_answer matches the [correct_answer] given above, or is within a small margin of error for numerical problems. Answer 'no' otherwise. 
+confidence: The extracted confidence score between 0% and 100% from [response].`
+                },
+                {
+                    id: 23,
+                    category: 'study',
+                    title: '80/20 Principle',
+                    content: `Agisci come un esperto di [sociolinguistica]. Dato il seguente testo [ ], identifica il concetto chiave (80/20) che uno studente dovrebbe assolutamente padroneggiare per superare un esame orale della materia. Poni una domanda chiara che verifichi la comprensione e lo studio del testo e scrivine la risposta breve.`
+                },
+                {
+                    id: 24,
+                    category: 'study',
+                    title: '80/20 per Riassunto',
+                    content: `Agisci come un esperto di [critica letteraria]. Dato il seguente testo [ ], identifica i concetti chiave (80/20) per ciascuna delle definizioni che uno studente dovrebbe assolutamente padroneggiare per superare un esame della materia. Poni una domanda chiara per ogni concetto linguistico che verifichi la comprensione e scrivine la risposta breve.
+
+--
+
+Act as an expert in [matter]. Given the following text [paste text], identify 3-5 core concepts a student absolutely must master to pass a foundational exam. Explain each in 2-3 sentences.`
+                },
+                {
+                    id: 25,
+                    category: 'study',
+                    title: 'Mappa Mentale Markdown',
+                    content: `Crea una mappa mentale in formato Markdown (md) scaricabile che possa importare in Xmind, dai un nome alla mappa (possibilmente quello del paragrafo principale).`
+                },
+                {
+                    id: 26,
+                    category: 'study',
+                    title: 'Sbobinatura',
+                    content: `Sei uno studente modello e il tuo compito oggi è quello di prendere la trascrizione audio di una registrazione Zoom e trasformarla. Siccome Word trascrive ma non lo fa molto accuratamente, vorrei che tu predissi quello che viene scritto e correggessi in modo automatico il testo. Attenzione a non cancellare parti importanti, devi riscrivere tutto. Io ti darò pezzi di testo, quindi non ti darò tutta la trascrizione, altrimenti questo potrebbe creare un problema di tokens nel messaggio che devi scrivere. Il tuo compito sarà quello di trascrivere in maniera logica; quindi, dovrai attuare tutta la tua potenza computazionale, quindi di predizione delle parole.`
+                },
+                {
+                    id: 27,
+                    category: 'study',
+                    title: 'XmindAnki Frasi',
+                    content: `Ciao ChatGPT, oggi ho un compito per te abbastanza specifico. Dal mio libro di testo di giapponese ho estrapolato le frasi con alcune strutture grammaticali e le ho caricate su xMind, un software per le mappe mentali. A me servirebbero le frasi di queste mappe all'interno di un altro software, cioè da inserire in un altro software anche che conoscerai abbastanza bene, il software di memorizzazione spaziata. Il tuo task è questo, io copio e incollo le mappe così come sono, quindi dalla schermata principale di xMind, le incollo all'interno della barra del messaggio qui in ChatGPT e il tuo compito sarà quello di estrapolare esclusivamente le frasi, quindi la frase in giapponese e la sua traduzione in italiano.`
+                },
+                {
+                    id: 28,
+                    category: 'study',
+                    title: 'Spiegazioni Slide Passo Passo',
+                    content: `Ti istruisco così tu puoi lavorare automaticamente. Sto seguendo un corso universitario di [materia]. Nel quale il docente ci carica delle slide sulla piattaforma del corso. Quello che vorrei che tu facessi in questa chat è che ti immedesimassi in un esperto di [materia] e mi aiutassi in questo task. In che cosa consiste il task? Il task consiste nel io caricherò delle slide, una slide alla volta o due slide alla volta, generalmente tematiche, e vorrei che tu innanzitutto spiegassi le slide semplicemente, e in più vorrei che tu collegassi le informazioni dei messaggi precedenti ai messaggi successivi.`
+                },
+                {
+                    id: 29,
+                    category: 'study',
+                    title: 'Sistema Appunti',
+                    content: `Sei uno studente universitario molto diligente, sulla base del testo che ti fornirò sotto forma di appunti, spesso confusionari o con errori sintattici, grammaticali ecc, il tuo compito è quello di sistemare questi appunti a livello dottorale, sia in termini di errori che di sintassi, rispettando linee guida si logicità e sequenzialità mantenendo la lingua originale degli appunti. Inizio:`
+                },
+                {
+                    id: 30,
+                    category: 'study',
+                    title: 'Key Causes',
+                    content: `What were the key causes of the American Civil War? Make it easy to understand.`
+                },
+                {
+                    id: 31,
+                    category: 'study',
+                    title: 'Whiteboard Session',
+                    content: `A wide image taken with a phone of a glass whiteboard, in a room overlooking the Bay Bridge. The field of view shows a woman writing, sporting a t-shirt with a large University logo. The handwriting looks natural and a bit messy, and we see the photographer's reflection.
+
+The text reads:
+
+(left)
+"Transfer between Modalities:
+
+Suppose we directly model
+p(text, pixels, sound) [equation]
+with one big autoregressive transformer.
+
+Pros:
+* image generation augmented with vast world knowledge
+* next-level text rendering
+* native in-context learning
+* unified post-training stack
+
+Cons:
+* varying bit-rate across modalities
+* compute not adaptive"
+
+(Right)
+"Fixes:
+* model compressed representations
+* compose autoregressive prior with a powerful decoder"`
+                },
+                {
+                    id: 32,
+                    category: 'study',
+                    title: 'Whiteboard Mini',
+                    content: `Resume the information in the text and create a wide image of a glass whiteboard in a room drawing of the main concept. The field of view shows a man drawing, sporting a t-shirt. The handdrawing draws naturally and a bit messy (use drawings on the whiteboard and anything that resembles vivd images). 
+The text reads:`
+                },
+                {
+                    id: 33,
+                    category: 'study',
+                    title: 'Whiteboard Physics',
+                    content: `Create a photorealistic image of a whiteboard in a university physics or fluid dynamics classroom. On the whiteboard, written in slightly messy but legible handwriting, is the color-coded Bernoulli equation, centered at the top: P (blue) + ½ρv² (green) + ρgh (orange) = constant (black).`
+                },
+                {
+                    id: 34,
+                    category: 'study',
+                    title: 'Science Experiment',
+                    content: `An infographic explaining newton's prism experiment in great detail`
+                },
+                {
+                    id: 35,
+                    category: 'study',
+                    title: 'Test Linguistico',
+                    content: `Sei un linguista. Fai un'analisi linguistica completa e approfondita della seguente frase giapponese: '{}'; considera morfologia, sintassi (con descrizione della struttura X-bar a parole), ruoli semantici, struttura informativa (tema/rema), tipo di predicato, ontologia dei referenti, implicature e presupposizioni, struttura argomentale ed eventuale serializzazione verbale, e rappresentazione funzionale stile LFG descritta in prosa; usa una terminologia tecnica ma spiegata chiaramente; la risposta deve essere articolata, rigorosa e ben organizzata, come in un commento linguistico destinato a un pubblico accademico.`
+                },
+                {
+                    id: 36,
+                    category: 'study',
+                    title: 'Explain Academic',
+                    content: `You are an academic expert in this field. Please explain the passages of the following text and explain it in a simple manner:`
+                },
+                {
+                    id: 37,
+                    category: 'study',
+                    title: 'Riassunto/Summary',
+                    content: `Riassumi il seguente testo:
+Summarise the following text, try to squeeze the 20 out of the 80:`
+                },
+                {
+                    id: 38,
+                    category: 'study',
+                    title: 'Annotazione Linguistica - Semantic Type',
+                    content: `Sei un linguista che sta lavorando per la risorsa T-PAS, un archivio di Typed Predicate Argument Structures, (anche dette pattern) per l'italiano. Tali pattern sono stati acquisiti manualmente da corpora attraverso l'analisi delle informazioni distribuzionali dei verbi italiani, seguendo la metodologia della Corpus Pattern Analysis descritta in Hanks (2004, 2013).
+
+[Include ontologia completa]
+
+Basandoti su quanto ti ho detto, per ciascuna delle seguenti frasi:
+1. 
+2. 
+3. 
+4. 
+5.
+Ti chiedo di:
+1. Individuare il soggetto del verbo passare 
+2. assegnare a ciascuno di essi il tipo semantico più specifico a cui sono riconducibili, utilizzando come riferimento l'ontologia che ti ho fornito e la sua struttura gerarchica.`
+                },
+                {
+                    id: 39,
+                    category: 'study',
+                    title: 'Annotazione Linguistica 4.0',
+                    content: `Sei un annotatore per una startup di annotazione, usa questo SCHEMA PER L'ANNOTAZIONE. Ti fornirò mano mano gli articoli.
+1. SELEZIONA LA PORZIONE DI TESTO PROBLEMATICA
+Individua il testo che influenza la percezione dell'evento o delle persone coinvolte.
+2. ASSEGNA UNA CATEGORIA ALLA PORZIONE DI TESTO
+Etichetta: Eventivo o Attributivo
+3. SCRIVI IL COMMENTO
+Usa sempre la formula: "Se [elemento del testo], allora [implicazione o conseguenza]"
+4. VERIFICA I POSSIBILI SEGNALI DI PROBLEMATICITÀ`
+                },
+                {
+                    id: 40,
+                    category: 'creative',
+                    title: 'Document Summary and Q&A',
+                    content: `I've attached a 50-page market research report called 'Tech Industry Trends 2023'. Can you provide a 2-paragraph summary focusing on AI and machine learning trends? Then, please answer these questions: 
+1. What are the top 3 AI applications in business for this year? 
+2. How is machine learning impacting job roles in the tech industry? 
+3. What potential risks or challenges does the report mention regarding AI adoption? 
+Please cite specific sections or page numbers when answering these questions.`
+                },
+                {
+                    id: 41,
+                    category: 'creative',
+                    title: 'Content Creation',
+                    content: `I need to write a blog post about cybersecurity best practices for small business owners. The audience is not very tech-savvy, so the content should be: 
+1. Easy to understand, avoiding technical jargon where possible 
+2. Practical, with actionable tips they can implement quickly 
+3. Engaging and slightly humorous to keep their interest 
+Please provide an outline for a 1000-word blog post that covers the top 5 cybersecurity practices this business owners should adopt.`
+                },
+                {
+                    id: 42,
+                    category: 'creative',
+                    title: 'Product Description',
+                    content: `Please help me write a product description for our new ergonomic office chair. Use a professional but engaging tone. Our brand voice is friendly, innovative, and health-conscious. The description should: 
+1. Highlight the chair's key ergonomic features 
+2. Explain how these features benefit the user's health and productivity 
+3. Include a brief mention of the sustainable materials used 
+4. End with a call-to-action encouraging readers to try the chair`
+                },
+                {
+                    id: 43,
+                    category: 'creative',
+                    title: 'Iterative Refinement',
+                    content: `That's a good start, but please refine it further. Make the following adjustments: 
+1. Make the tone more casual and friendly 
+2. Add a specific example of how our product has helped a customer 
+3. Shorten the second paragraph to focus more on the benefits rather than the features`
+                },
+                {
+                    id: 44,
+                    category: 'creative',
+                    title: 'Apps HTML',
+                    content: `Vorrei creare un'applicazione HTML che permetta di creare un framework, costituita dapprima del MINDSET, inteso come intende Romagnoli, e poi dal riconoscimento delle emozioni.
+Nel file allegato a queste istruzioni trovi la risorsa completa. Vorrei che tu leggessi queste istruzioni attentamente e scrivessi in codice l'applicazione.
+Prenditi tutto il tempo possibile. Immagina di essere un programmatore professionista.`
+                },
+                {
+                    id: 45,
+                    category: 'creative',
+                    title: 'PAV Image Generation',
+                    content: `Crea un'immagine surreale PAV con paradosso, azione e vividezza sensoriale per ricordare '{}', legata al suono della parola; genera direttamente l'immagine in stile flat con uno stile visivo ogni volta diverso, senza limitarti a descriverla.`
+                },
+                {
+                    id: 46,
+                    category: 'creative',
+                    title: 'PAV Method English',
+                    content: `Create image. For the Japanese word '{}', create a vivid and imaginative image using the PAV method (Paradox, Action, Vividness). Explanation: [briefly explain how this helps recall the meaning]; Example: Word: 火 | PAV: A hippo in a tuxedo breathes fire onto an ice sculpture of Mt. Fuji while screaming karaoke | Explanation: The hippo (paradox), fire-breathing (action), and vivid scene help link 火 to "fire"; After draw the scene with NO text and give an explanation of it in the chat.`
+                },
+                {
+                    id: 47,
+                    category: 'creative',
+                    title: 'Foto Analogica',
+                    content: `Foto analogica in stile grunge di [nome del personaggio] mentre gioca a [titolo del videogioco] su una PlayStation 1, mostrato su un televisore CRT anni '90 in una camera da letto scarsamente illuminata.
+È seduto per terra davanti alla TV, con in mano un controller della PS1, e accanto a lui si trova [oggetto o accessorio caratteristico].
+Il personaggio guarda verso la fotocamera a metà azione, mentre il gioco è visibile sullo sfondo.
+Foto in stile paparazzi, con flash diretto, grezza e non modificata.`
+                },
+                {
+                    id: 48,
+                    category: 'creative',
+                    title: 'Starter Pack',
+                    content: `Crea un'immagine in stile packaging Starter Pack, come se fosse una figurina da collezione.
+La confezione è realizzata in plastica trasparente modellata, inserita in uno sfondo cartonato di colore lavanda pallido.
+Lo sfondo generale dell'immagine è grigio chiaro, con un aspetto minimalista e ordinato.
+Il personaggio è rappresentato come una figurina 3D stilizzata, in stile cartoon ma realistico.`
+                },
+                {
+                    id: 49,
+                    category: 'creative',
+                    title: 'Meaningful Words',
+                    content: `Magnetic poetry on a fridge in a mid-century home:
+Line 1: "A picture"
+Line 2: "is worth"
+Line 3: "a thousand words,"
+Line 4: "but sometimes"Large gapLine 5: "in the right place"
+Line 6: "can elevate"
+Line 7: "its meaning."
+The man is holding the words "a few" in his right hand and "words" in his left.`
+                },
+                {
+                    id: 50,
+                    category: 'creative',
+                    title: 'Four Panel Comic',
+                    content: `Make an image of a four panel strip, with some padding around the border: A little snail is at the counter of a flashy car showroom. The salesman has leaned way over the desk to even see him. Close up on the snail looking very serious. He says, "I want your fastest sports car… and I want you to paint big letter 'S's on the doors, the hood and the roof." The salesman is scratching his head. "Um… we can do that, but why the S's?" Smash cut to a red blur roaring down the highway. The sports car is covered in giant S's. People on the sidewalk are pointing and laughing: "WOW! LOOK AT THAT S CAR GO!"`
+                },
+                {
+                    id: 51,
+                    category: 'creative',
+                    title: 'Sticker Multiple',
+                    content: `1) Can you make me a cute minimalist otter eating a strawberry sticker? Use a thick white border and transparent background
+2) Try a different minimalist style and a gray racoon
+3) awww, can you add a chew mark to the strawberry and maybe some red mess around the mouth`
+                },
+                {
+                    id: 52,
+                    category: 'creative',
+                    title: 'Street Signs',
+                    content: `Create a photorealistic image of [two characters] in their [age range] ([brief hair descriptions or defining features]) reading a heavily posted street sign.
+Context: A [type of city street] in [specific or general location], featuring a pole completely covered with numerous realistic, detailed street signs.`
+                },
+                {
+                    id: 53,
+                    category: 'creative',
+                    title: 'Menu Design',
+                    content: `Design a photorealistic restaurant menu layout for a traditional concept restaurant called [restaurant name], located in [location]. The restaurant focuses on [cuisine type] made with [philosophy or ingredient focus, e.g., organic, farm-fresh, seasonal] ingredients. The menu should feel elegant, traditional, and rustic, but also upscale and minimal in layout.`
+                },
+                {
+                    id: 54,
+                    category: 'creative',
+                    title: 'Grid List',
+                    content: `A square image containing a 4 row by 4 column grid containing 16 objects on a white background. Go from left to right, top to bottom. Here's the list:
+1. a blue star
+2. red triangle
+3. green square
+4. pink circle
+5. orange hourglass
+6. purple infinity sign
+7. black and white polka dot bowtie
+8. tiedye "42"
+9. an orange cat wearing a black baseball cap
+10. a map with a treasure chest
+11. a pair of googly eyes
+12. a thumbs up emoji
+13. a pair of scissors
+14. a blue and white giraffe
+15. the word "OpenAI" written in cursive
+16. a rainbow-colored lightning bolt`
+                },
+                {
+                    id: 55,
+                    category: 'creative',
+                    title: 'Fotorealismo 1',
+                    content: `A candid paparazzi-style photo of Karl Marx hurriedly walking through the parking lot of the Mall of America, glancing over his shoulder with a startled expression as he tries to avoid being photographed. He's clutching multiple glossy shopping bags filled with luxury goods.`
+                },
+                {
+                    id: 56,
+                    category: 'creative',
+                    title: 'Fotorealismo 2',
+                    content: `Generate a photorealistic image of farmer's market in Milan on a saturday in summer 2002, it's a beautiful late june day, people are shopping and eating sandwiches. in focus should be a young asian tourist wearing denim overalls and sipping on a strawberry banana smoothie - rest can be blurred. the photo should be reminiscent of that a digital camera from 2002 would take, with a timestamp like a printed photo would have. aspect ratio should be 3:2`
+                },
+                {
+                    id: 57,
+                    category: 'creative',
+                    title: 'Detailed Animation',
+                    content: `Create a detailed pixel art frame animation for a game, where the final image is divided into multiple sub-images, each serving as a continuous animation keyframe. Design the sequence to depict [a wizard casting a spell: begin with intricate hand motions, then show the wizard conjuring a vibrant fireball, and finally capture the moment of casting the fireball.] Ensure the keyframes transition smoothly and continuously, and include as many frames as possible to achieve a high level of fluidity and detail in the animation.`
+                },
+                {
+                    id: 58,
+                    category: 'creative',
+                    title: 'Pixel Art for Anki',
+                    content: `Create a detailed pixel art for a game. Design the sequence to depict this phrase '{}'. Ensure the keyframes transition smoothly and continuously and include as many frames as possible to achieve a high level of fluidity and detail in the animation.`
+                },
+                {
+                    id: 59,
+                    category: 'work',
+                    title: 'Ricerca Lavoro',
+                    content: `In base alle informazioni che sai su di me analizza e riassumi il seguente posto di lavoro. Immagina di essere un professionista della selezione lavoro e sottolinea perché dovrei fare l'application a questo lavoro o perché non dovrei farla, tieni conto della distanza (con i mezzi) da [città di residenza]:`
+                },
+                {
+                    id: 60,
+                    category: 'work',
+                    title: 'Traduzione Audiovisiva',
+                    content: `Poiché gran parte degli studi in questo settore si è concentrata sulla sottotitolazione, anche la classificazione proposta da Irene Ranzato è pensata principalmente per questo tipo di traduzione. Tuttavia, con alcune distinzioni, essa può essere agevolmente applicata anche al doppiaggio. Si tratta di una tassonomia elaborata nell'ambito della traduzione audiovisiva e finalizzata all'analisi degli elementi culturospecifici, come presentata nei suoi studi — tra cui quelli dedicati alla traduzione della trilogia greca moderna tra letteratura e audiovisivo.
+
+Le strategie traduttive individuate sono le seguenti:
+1. Prestito: la parola o la frase del testo fonte rimane inalterata anche nel testo di arrivo.
+2. Calco: traduzione letterale dell'espressione originale.
+3. Esplicitazione: il testo viene reso più accessibile attraverso una specificazione o una generalizzazione.
+4. Sostituzione: per ragioni di opportunità, obiettivi comunicativi o vincoli tecnici, un riferimento viene sostituito con un altro più o meno distante da quello originale.
+5. Trasposizione: un concetto culturale della cultura di partenza viene tradotto con un concetto culturalmente equivalente della cultura di arrivo.
+6. Creazione lessicale: invenzione di un neologismo ad hoc.
+7. Compensazione: una perdita traduttiva in un punto del testo viene compensata con un'aggiunta in un altro punto.
+8. Omissione: il riferimento culturospecifico viene eliminato.
+9. Aggiunta: inserimento di un elemento non presente nel testo originale per facilitare la comprensione o colmare una lacuna.`
+                },
+                {
+                    id: 61,
+                    category: 'work',
+                    title: 'Professional Email',
+                    content: `I need to write a professional email to a client about …
+Here's a similar email I've sent before: 
+'Dear [Client], I hope this email finds you well. I wanted to update you on the progress of [Project Name]. Unfortunately, we've encountered an unexpected issue that will delay our completion date by approximately two weeks. We're working diligently to resolve this and will keep you updated on our progress. Please let me know if you have any questions or concerns. Best regards, [Your Name]' 
+Help me draft a new email following a similar tone and structure, but for our current …`
+                }
+            ]
+        };
+
+        let data;
+        try {
+            data = JSON.parse(localStorage.getItem('promptManagerData')) || initialData;
+        } catch (error) {
+            console.error('Dati salvati non leggibili, uso i dati iniziali', error);
+            data = initialData;
+        }
+        let currentCategory = 'all';
+        let overlayWindow = null;
+
+        // Evita che tag nei prompt (es. <instructions>) vengano interpretati come HTML
+        function escapeHtml(text) {
+            return String(text ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        
+        // Inizializza favorites se non esistono
+        if (!data.favorites) {
+            data.favorites = [];
+            saveData();
+        }
+
+        // Dark Mode Toggle System
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('promptManagerTheme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+            
+            setTheme(theme);
+            updateThemeToggle(theme);
+        }
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            if (overlayWindow && !overlayWindow.closed) {
+                overlayWindow.document.documentElement.setAttribute('data-theme', theme);
+            }
+            localStorage.setItem('promptManagerTheme', theme);
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            setTheme(newTheme);
+            updateThemeToggle(newTheme);
+        }
+        
+        function updateThemeToggle(theme) {
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+            
+            if (theme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Light';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Dark';
+            }
+        }
+        
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!localStorage.getItem('promptManagerTheme')) {
+                const theme = e.matches ? 'dark' : 'light';
+                setTheme(theme);
+                updateThemeToggle(theme);
+            }
+        });
+
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTheme();
+            renderCategories();
+            renderPrompts();
+            updateStats();
+            initializeKeyboardSupport();
+            checkBackupReminder();
+
+            // Chiede al browser di non cancellare automaticamente i dati quando lo spazio scarseggia
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().catch(() => {});
+            }
+            
+            // Event listeners
+            document.getElementById('searchBar').addEventListener('input', (e) => {
+                renderPrompts(e.target.value);
+            });
+
+            document.getElementById('addPromptForm').addEventListener('submit', handleAddPrompt);
+            document.getElementById('editPromptForm').addEventListener('submit', handleEditPrompt);
+            document.getElementById('addCategoryForm').addEventListener('submit', handleAddCategory);
+            document.getElementById('importFile').addEventListener('change', handleImport);
+        });
+
+        function renderCategories() {
+            const nav = document.getElementById('categoryNav');
+            const favoritesCount = data.favorites ? data.favorites.length : 0;
+            
+            nav.innerHTML = `
+                <li class="category-item">
+                    <a href="#" class="category-link ${currentCategory === 'all' ? 'active' : ''}"
+                       onclick="filterByCategory('all'); return false;">Tutti i Prompt</a>
+                </li>
+                <li class="category-item">
+                    <a href="#" class="category-link ${currentCategory === 'favorites' ? 'active' : ''}"
+                       onclick="filterByCategory('favorites'); return false;">⭐ Preferiti (${favoritesCount})</a>
+                </li>
+            `;
+
+            data.categories.forEach(cat => {
+                nav.innerHTML += `
+                    <li class="category-item">
+                        <a href="#" class="category-link ${currentCategory === cat.id ? 'active' : ''}"
+                           data-category="${escapeHtml(cat.id)}"
+                           onclick="filterByCategory(this.dataset.category); return false;">${escapeHtml(cat.name)}</a>
+                    </li>
+                `;
+            });
+        }
+
+        function renderPrompts(searchTerm = document.getElementById('searchBar').value) {
+            const container = document.getElementById('promptsContainer');
+            let filteredPrompts = data.prompts;
+
+            // Filtra per categoria
+            if (currentCategory === 'favorites') {
+                filteredPrompts = filteredPrompts.filter(p => data.favorites && data.favorites.includes(p.id));
+            } else if (currentCategory !== 'all') {
+                filteredPrompts = filteredPrompts.filter(p => p.category === currentCategory);
+            }
+
+            // Filtra per termine di ricerca (titolo, contenuto o nome categoria)
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filteredPrompts = filteredPrompts.filter(p => 
+                    (p.title || '').toLowerCase().includes(term) ||
+                    (p.content || '').toLowerCase().includes(term) ||
+                    getCategoryName(p.category).toLowerCase().includes(term)
+                );
+            }
+
+            // Una categoria selezionata mostra sempre la sua intestazione (anche se vuota),
+            // così è possibile rinominarla o eliminarla
+            const selectedCategory = data.categories.find(c => c.id === currentCategory);
+            if (selectedCategory) {
+                container.innerHTML = createCategorySection(selectedCategory.id, filteredPrompts);
+                return;
+            }
+
+            if (filteredPrompts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>Nessun prompt trovato</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Raggruppa per categoria o visualizza i preferiti
+            if (currentCategory === 'favorites') {
+                const categoryHtml = `
+                    <div class="category-section">
+                        <div class="category-header">
+                            <h2 class="category-title">⭐ Preferiti</h2>
+                        </div>
+                        ${filteredPrompts.map(prompt => createPromptCard(prompt)).join('')}
+                    </div>
+                `;
+                container.innerHTML = categoryHtml;
+            } else {
+                const grouped = {};
+                filteredPrompts.forEach(prompt => {
+                    if (!grouped[prompt.category]) {
+                        grouped[prompt.category] = [];
+                    }
+                    grouped[prompt.category].push(prompt);
+                });
+
+                container.innerHTML = Object.entries(grouped)
+                    .map(([catId, prompts]) => createCategorySection(catId, prompts))
+                    .join('');
+            }
+        }
+
+        function getCategoryName(catId) {
+            const category = data.categories.find(c => c.id === catId);
+            return category ? category.name : 'Senza Categoria';
+        }
+
+        function createCategorySection(catId, prompts) {
+            const category = data.categories.find(c => c.id === catId);
+            const actions = category ? `
+                                <div class="prompt-actions">
+                                    <button class="action-btn" data-category="${escapeHtml(category.id)}"
+                                            onclick="renameCategory(this.dataset.category)">✏️ Rinomina</button>
+                                    <button class="action-btn" data-category="${escapeHtml(category.id)}"
+                                            onclick="deleteCategory(this.dataset.category)">🗑️ Elimina</button>
+                                </div>` : '';
+            const body = prompts.length
+                ? prompts.map(prompt => createPromptCard(prompt)).join('')
+                : '<div class="empty-state"><p>Nessun prompt trovato</p></div>';
+            return `
+                        <div class="category-section">
+                            <div class="category-header">
+                                <h2 class="category-title">${escapeHtml(getCategoryName(catId))}</h2>${actions}
+                            </div>
+                            ${body}
+                        </div>
+                    `;
+        }
+
+        function createPromptCard(prompt) {
+            return `
+                <div class="prompt-card">
+                    <div class="prompt-header">
+                        <h3 class="prompt-title">${escapeHtml(prompt.title)}</h3>
+                        <div class="prompt-actions">
+                            <button class="action-btn copy-btn" onclick="copyPrompt(${prompt.id})">
+                                📋 Copia
+                            </button>
+                            <button class="action-btn favorite-btn ${data.favorites && data.favorites.includes(prompt.id) ? 'favorited' : ''}" 
+                                    onclick="toggleFavorite(${prompt.id})">
+                                ${data.favorites && data.favorites.includes(prompt.id) ? '⭐' : '☆'} Preferito
+                            </button>
+                            <button class="action-btn" onclick="editPrompt(${prompt.id})">
+                                ✏️ Modifica
+                            </button>
+                            <button class="action-btn" onclick="toggleExpand(${prompt.id})">
+                                🔍 Espandi
+                            </button>
+                            <button class="action-btn" onclick="deletePrompt(${prompt.id})">
+                                🗑️ Elimina
+                            </button>
+                        </div>
+                    </div>
+                    <div class="prompt-content" id="prompt-${prompt.id}">${escapeHtml(prompt.content)}</div>
+                </div>
+            `;
+        }
+
+        function filterByCategory(catId) {
+            currentCategory = catId;
+            renderCategories();
+            renderPrompts();
+        }
+
+        function toggleFavorite(id) {
+            if (!data.favorites) {
+                data.favorites = [];
+            }
+            
+            const index = data.favorites.indexOf(id);
+            if (index > -1) {
+                data.favorites.splice(index, 1);
+                showToast('Rimosso dai preferiti');
+            } else {
+                data.favorites.push(id);
+                showToast('Aggiunto ai preferiti');
+            }
+            
+            saveData();
+            renderCategories();
+            renderPrompts();
+        }
+
+        function copyPrompt(id) {
+            const prompt = data.prompts.find(p => p.id === id);
+            if (!prompt) return;
+            // Il bottone va letto subito: dentro la Promise window.event non esiste più
+            const btn = event.currentTarget;
+            copyText(prompt.content).then(ok => {
+                if (!ok) {
+                    showToast('Impossibile copiare il prompt');
+                    return;
+                }
+                showToast('Prompt copiato negli appunti!');
+                btn.classList.add('copied');
+                btn.textContent = '✓ Copiato';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.textContent = '📋 Copia';
+                }, 2000);
+            });
+        }
+
+        // Copia negli appunti dalla finestra indicata (la principale o l'overlay):
+        // la Clipboard API funziona solo dal documento che ha il focus
+        function copyText(text, win = window) {
+            if (win.navigator.clipboard && win.isSecureContext) {
+                return win.navigator.clipboard.writeText(text)
+                    .then(() => true, () => fallbackCopy(text, win.document));
+            }
+            return Promise.resolve(fallbackCopy(text, win.document));
+        }
+
+        // Copia per contesti senza Clipboard API (es. pagina aperta via http in rete locale)
+        function fallbackCopy(text, doc = document) {
+            const textarea = doc.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            doc.body.appendChild(textarea);
+            textarea.select();
+            let ok = false;
+            try {
+                ok = doc.execCommand('copy');
+            } catch (error) {
+                ok = false;
+            }
+            doc.body.removeChild(textarea);
+            return ok;
+        }
+
+        function toggleExpand(id) {
+            const content = document.getElementById(`prompt-${id}`);
+            content.classList.toggle('expanded');
+            event.target.textContent = content.classList.contains('expanded') ? '🔻 Riduci' : '🔍 Espandi';
+        }
+
+        function deletePrompt(id) {
+            if (confirm('Sei sicuro di voler eliminare questo prompt?')) {
+                data.prompts = data.prompts.filter(p => p.id !== id);
+                if (data.favorites) {
+                    data.favorites = data.favorites.filter(favId => favId !== id);
+                }
+                saveData();
+                renderCategories();
+                renderPrompts();
+                updateStats();
+                showToast('Prompt eliminato');
+            }
+        }
+
+        function editPrompt(id) {
+            const prompt = data.prompts.find(p => p.id === id);
+            if (prompt) {
+                const select = document.getElementById('editPromptCategory');
+                const hasCategory = data.categories.some(cat => cat.id === prompt.category);
+                select.innerHTML = (hasCategory ? '' : '<option value="" selected>Senza Categoria</option>') +
+                    data.categories.map(cat =>
+                        `<option value="${escapeHtml(cat.id)}" ${cat.id === prompt.category ? 'selected' : ''}>${escapeHtml(cat.name)}</option>`
+                    ).join('');
+
+                document.getElementById('editPromptId').value = prompt.id;
+                document.getElementById('editPromptTitle').value = prompt.title;
+                document.getElementById('editPromptContent').value = prompt.content;
+                document.getElementById('editPromptModal').classList.add('active');
+            }
+        }
+
+        function openAddCategoryModal() {
+            document.getElementById('addCategoryModal').classList.add('active');
+        }
+
+        function handleAddPrompt(e) {
+            e.preventDefault();
+            const newPrompt = {
+                id: Date.now(),
+                title: document.getElementById('promptTitle').value,
+                category: document.getElementById('promptCategory').value,
+                content: document.getElementById('promptContent').value
+            };
+            data.prompts.push(newPrompt);
+            saveData();
+            renderPrompts();
+            updateStats();
+            closeModal('addPromptModal');
+            showToast('Prompt aggiunto con successo!');
+        }
+
+        function handleEditPrompt(e) {
+            e.preventDefault();
+            const promptId = parseInt(document.getElementById('editPromptId').value);
+            const promptIndex = data.prompts.findIndex(p => p.id === promptId);
+            
+            if (promptIndex !== -1) {
+                data.prompts[promptIndex].title = document.getElementById('editPromptTitle').value;
+                data.prompts[promptIndex].category = document.getElementById('editPromptCategory').value;
+                data.prompts[promptIndex].content = document.getElementById('editPromptContent').value;
+                
+                saveData();
+                renderPrompts();
+                closeModal('editPromptModal');
+                showToast('Prompt modificato con successo!');
+            }
+        }
+
+        function categoryNameExists(name, exceptId = null) {
+            return data.categories.some(c => c.id !== exceptId && c.name.toLowerCase() === name.toLowerCase());
+        }
+
+        function handleAddCategory(e) {
+            e.preventDefault();
+            const name = document.getElementById('categoryName').value.trim();
+            if (!name) return;
+            if (categoryNameExists(name)) {
+                showToast('Esiste già una categoria con questo nome');
+                return;
+            }
+            const newCategory = {
+                id: Date.now().toString(),
+                name: name
+            };
+            data.categories.push(newCategory);
+            saveData();
+            renderCategories();
+            updateStats();
+            closeModal('addCategoryModal');
+            showToast('Categoria aggiunta con successo!');
+        }
+
+        function renameCategory(catId) {
+            const category = data.categories.find(c => c.id === catId);
+            if (!category) return;
+            const name = (prompt('Nuovo nome della categoria:', category.name) || '').trim();
+            if (!name || name === category.name) return;
+            if (categoryNameExists(name, catId)) {
+                showToast('Esiste già una categoria con questo nome');
+                return;
+            }
+            category.name = name;
+            saveData();
+            renderCategories();
+            renderPrompts();
+            showToast('Categoria rinominata');
+        }
+
+        function deleteCategory(catId) {
+            const category = data.categories.find(c => c.id === catId);
+            if (!category) return;
+            const count = data.prompts.filter(p => p.category === catId).length;
+            const message = count
+                ? `Eliminare la categoria "${category.name}"? I suoi ${count} prompt NON verranno eliminati: finiranno in "Senza Categoria" (visibili in "Tutti i Prompt").`
+                : `Eliminare la categoria "${category.name}"?`;
+            if (!confirm(message)) return;
+            data.categories = data.categories.filter(c => c.id !== catId);
+            data.prompts.forEach(p => {
+                if (p.category === catId) p.category = '';
+            });
+            if (currentCategory === catId) currentCategory = 'all';
+            saveData();
+            renderCategories();
+            renderPrompts();
+            updateStats();
+            showToast('Categoria eliminata');
+        }
+
+        function updateStats() {
+            document.getElementById('totalPrompts').textContent = data.prompts.length;
+            document.getElementById('totalCategories').textContent = data.categories.length;
+        }
+
+        function saveData() {
+            localStorage.setItem('promptManagerData', JSON.stringify(data));
+            // Ricorda da quando esistono modifiche non ancora esportate
+            if (!localStorage.getItem('promptManagerUnsavedSince')) {
+                localStorage.setItem('promptManagerUnsavedSince', Date.now().toString());
+            }
+            renderOverlayFavorites();
+        }
+
+        // I dati vivono solo in questo browser: se ci sono modifiche non esportate
+        // da più di BACKUP_REMINDER_DAYS giorni, suggerisce un backup
+        const BACKUP_REMINDER_DAYS = 7;
+
+        function checkBackupReminder() {
+            const since = parseInt(localStorage.getItem('promptManagerUnsavedSince'));
+            if (!since) return;
+            const days = Math.floor((Date.now() - since) / (1000 * 60 * 60 * 24));
+            if (days < BACKUP_REMINDER_DAYS) return;
+            document.getElementById('backupReminderText').textContent =
+                `⚠️ Hai modifiche non salvate in un backup da ${days} giorni. I prompt sono salvati solo in questo browser: esportali per non perderli.`;
+            document.getElementById('backupReminder').hidden = false;
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `prompts_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            localStorage.removeItem('promptManagerUnsavedSince');
+            document.getElementById('backupReminder').hidden = true;
+            showToast('Dati esportati con successo!');
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImport(e) {
+            const file = e.target.files[0];
+            // Azzera il campo, altrimenti re-importare lo stesso file non scatena "change"
+            e.target.value = '';
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const importedData = JSON.parse(event.target.result);
+                        if (Array.isArray(importedData.categories) && Array.isArray(importedData.prompts)) {
+                            if (!confirm(`L'importazione sostituirà tutti i ${data.prompts.length} prompt attuali con i ${importedData.prompts.length} del file. Continuare?`)) {
+                                return;
+                            }
+                            data = importedData;
+                            if (!Array.isArray(data.favorites)) {
+                                data.favorites = [];
+                            }
+                            currentCategory = 'all';
+                            saveData();
+                            // I dati appena importati coincidono con il file: sono già un backup
+                            localStorage.removeItem('promptManagerUnsavedSince');
+                            renderCategories();
+                            renderPrompts();
+                            updateStats();
+                            showToast('Dati importati con successo!');
+                        } else {
+                            showToast('File non valido');
+                        }
+                    } catch (error) {
+                        showToast('Errore nell\'importazione del file');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Gestione click fuori dai modal: chiude solo se anche il mousedown è avvenuto
+        // sullo sfondo, così selezionare testo trascinando fuori dal form non lo chiude
+        let mouseDownTarget = null;
+        window.addEventListener('mousedown', (event) => {
+            mouseDownTarget = event.target;
+        });
+        window.onclick = (event) => {
+            if (event.target.classList.contains('modal') && mouseDownTarget === event.target) {
+                event.target.classList.remove('active');
+            }
+        };
+
+        // === Overlay sempre in primo piano (ex app PromptOverlay) ===
+        // Preferiti da copiare con un clic + box di testo liberi (Copia, Pulisci, Salva).
+        // Usa Document Picture-in-Picture (Chrome/Edge desktop); altrove apre un popup normale.
+        const OVERLAY_DEFAULT_BOXES = 3;
+        let overlayBoxes = loadOverlayBoxes();
+
+        function loadOverlayBoxes() {
+            try {
+                const boxes = JSON.parse(localStorage.getItem('promptManagerOverlayBoxes'));
+                if (Array.isArray(boxes) && boxes.length >= OVERLAY_DEFAULT_BOXES) return boxes;
+            } catch (error) {
+                // dati non leggibili: si riparte dai box vuoti
+            }
+            return Array(OVERLAY_DEFAULT_BOXES).fill('');
+        }
+
+        function saveOverlayBoxes() {
+            localStorage.setItem('promptManagerOverlayBoxes', JSON.stringify(overlayBoxes));
+        }
+
+        async function openOverlay() {
+            if (overlayWindow && !overlayWindow.closed) {
+                overlayWindow.focus();
+                return;
+            }
+            if ('documentPictureInPicture' in window) {
+                try {
+                    overlayWindow = await documentPictureInPicture.requestWindow({ width: 380, height: 600 });
+                } catch (error) {
+                    showToast('Impossibile aprire l\'overlay');
+                    return;
+                }
+            } else {
+                overlayWindow = window.open('', 'promptOverlay', 'width=380,height=600');
+                if (!overlayWindow) {
+                    showToast('Popup bloccato: consenti i popup per aprire l\'overlay');
+                    return;
+                }
+                showToast('Il browser non supporta finestre sempre in primo piano: overlay aperto come finestra normale');
+            }
+
+            const doc = overlayWindow.document;
+            doc.title = 'Prompt Overlay';
+            document.querySelectorAll('style').forEach(style => doc.head.appendChild(style.cloneNode(true)));
+            doc.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') || 'light');
+            doc.body.innerHTML = `
+                <div class="overlay">
+                    <h2 class="overlay-title">⭐ Preferiti</h2>
+                    <div id="overlayFavorites"></div>
+                    <h2 class="overlay-title">📝 Box</h2>
+                    <div id="overlayBoxes"></div>
+                    <button class="btn" id="overlayAddBox" style="width: 100%;">+ Aggiungi box</button>
+                </div>
+            `;
+            doc.getElementById('overlayAddBox').addEventListener('click', () => {
+                overlayBoxes.push('');
+                saveOverlayBoxes();
+                renderOverlayBoxes();
+            });
+            overlayWindow.addEventListener('pagehide', () => {
+                overlayWindow = null;
+            });
+
+            renderOverlayFavorites();
+            renderOverlayBoxes();
+        }
+
+        function renderOverlayFavorites() {
+            if (!overlayWindow || overlayWindow.closed) return;
+            const container = overlayWindow.document.getElementById('overlayFavorites');
+            const favorites = data.prompts.filter(p => data.favorites && data.favorites.includes(p.id));
+            if (!favorites.length) {
+                container.innerHTML = '<p class="overlay-empty">Nessun preferito: aggiungili con ☆ nella libreria.</p>';
+                return;
+            }
+            container.innerHTML = favorites.map(p => `
+                <div class="overlay-row">
+                    <span class="overlay-label" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</span>
+                    <button class="action-btn">📋 Copia</button>
+                </div>
+            `).join('');
+            container.querySelectorAll('button').forEach((btn, i) => {
+                btn.addEventListener('click', () => {
+                    copyText(favorites[i].content, overlayWindow)
+                        .then(ok => flashButton(btn, ok ? '✓ Copiato' : 'Errore', '📋 Copia'));
+                });
+            });
+        }
+
+        function renderOverlayBoxes() {
+            if (!overlayWindow || overlayWindow.closed) return;
+            const container = overlayWindow.document.getElementById('overlayBoxes');
+            container.innerHTML = overlayBoxes.map((text, i) => `
+                <div class="overlay-box">
+                    <div class="overlay-row">
+                        <span class="overlay-label">Box ${i + 1}</span>
+                        <button class="action-btn" data-action="copy">📋 Copia</button>
+                        <button class="action-btn" data-action="clean">🧹 Pulisci</button>
+                        <button class="action-btn" data-action="save" title="Salva nella libreria">💾</button>
+                        ${i >= OVERLAY_DEFAULT_BOXES ? '<button class="action-btn" data-action="remove" title="Rimuovi box">×</button>' : ''}
+                    </div>
+                    <textarea class="form-textarea"></textarea>
+                </div>
+            `).join('');
+            container.querySelectorAll('.overlay-box').forEach((boxEl, i) => {
+                const textarea = boxEl.querySelector('textarea');
+                textarea.value = overlayBoxes[i];
+                textarea.addEventListener('input', () => {
+                    overlayBoxes[i] = textarea.value;
+                    saveOverlayBoxes();
+                });
+                boxEl.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', () => handleOverlayBoxAction(btn, i, textarea));
+                });
+            });
+        }
+
+        function handleOverlayBoxAction(btn, index, textarea) {
+            const action = btn.dataset.action;
+            // Etichetta originale salvata al primo clic, così i clic ripetuti non la perdono
+            const label = btn.dataset.label || (btn.dataset.label = btn.textContent);
+            const text = textarea.value;
+            if ((action === 'copy' || action === 'save') && !text.trim()) {
+                flashButton(btn, 'Vuoto', label);
+                return;
+            }
+            if (action === 'copy') {
+                copyText(text, overlayWindow).then(ok => flashButton(btn, ok ? '✓ Copiato' : 'Errore', label));
+            } else if (action === 'clean') {
+                overlayBoxes[index] = '';
+                textarea.value = '';
+                saveOverlayBoxes();
+                flashButton(btn, '✓ Pulito', label);
+            } else if (action === 'save') {
+                // Finisce in "Senza Categoria": titolo e categoria si sistemano poi con Modifica
+                data.prompts.push({
+                    id: Date.now(),
+                    title: text.trim().split('\n')[0].slice(0, 60),
+                    category: '',
+                    content: text
+                });
+                saveData();
+                renderPrompts();
+                updateStats();
+                flashButton(btn, '✓', label);
+                showToast('Prompt salvato dall\'overlay in "Senza Categoria"');
+            } else if (action === 'remove') {
+                overlayBoxes.splice(index, 1);
+                saveOverlayBoxes();
+                renderOverlayBoxes();
+            }
+        }
+
+        function flashButton(btn, message, resetText) {
+            btn.textContent = message;
+            setTimeout(() => {
+                btn.textContent = resetText;
+            }, 1000);
+        }
+
+        // PWA Installation and Service Worker
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwa-install').style.display = 'block';
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('PWA installata');
+                        document.getElementById('pwa-install').style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        // Service Worker registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registered successfully');
+                    }, function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            document.getElementById('pwa-install').style.display = 'none';
+            console.log('PWA was installed');
+        });
+
+        // Keyboard Navigation Support
+        function initializeKeyboardSupport() {
+            // Global keyboard shortcuts
+            document.addEventListener('keydown', handleGlobalKeyboard);
+            
+            // Category navigation
+            setupCategoryNavigation();
+            
+            // Search focus shortcuts
+            setupSearchNavigation();
+            
+            // Modal keyboard support
+            setupModalNavigation();
+            
+            // Show keyboard help
+            showKeyboardHelp();
+        }
+
+        function handleGlobalKeyboard(e) {
+            // Skip if user is typing in inputs
+            const isTyping = e.target.matches('input, textarea, select');
+            if (isTyping && e.target !== document.getElementById('searchBar')) {
+                return;
+            }
+            // Le scorciatoie a tasto singolo (H, ?, 1-9) non devono bloccare la digitazione
+            // nella barra di ricerca né agire sotto un modal aperto
+            const singleKeyAllowed = !isTyping && !e.ctrlKey && !e.metaKey && !e.altKey &&
+                !document.querySelector('.modal.active');
+
+            // Global shortcuts
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('searchBar').focus();
+            } else if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                openAddPromptModal();
+            } else if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                exportData();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeAllModals();
+            } else if (!singleKeyAllowed) {
+                return;
+            } else if (e.key === 'h' || e.key === '?') {
+                e.preventDefault();
+                showKeyboardHelp(true);
+            } else if (e.key === 'o') {
+                e.preventDefault();
+                openOverlay();
+            } else if (e.key >= '1' && e.key <= '9') {
+                // Quick category selection
+                const categoryIndex = parseInt(e.key) - 1;
+                const categories = document.querySelectorAll('#categoryNav .category-link');
+                if (categories[categoryIndex]) {
+                    categories[categoryIndex].click();
+                }
+            }
+        }
+
+        function setupCategoryNavigation() {
+            // Add keyboard navigation to category sidebar
+            const categoryList = document.getElementById('categoryNav');
+            if (categoryList) {
+                categoryList.setAttribute('role', 'navigation');
+                categoryList.setAttribute('aria-label', 'Categorie prompt');
+            }
+        }
+
+        function setupSearchNavigation() {
+            const searchBar = document.getElementById('searchBar');
+            if (searchBar) {
+                searchBar.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Focus first prompt card if available
+                        const firstPrompt = document.querySelector('.prompt-card .action-btn');
+                        if (firstPrompt) firstPrompt.focus();
+                    } else if (e.key === 'Escape') {
+                        searchBar.value = '';
+                        renderPrompts();
+                        searchBar.blur();
+                    }
+                });
+            }
+        }
+
+        function setupModalNavigation() {
+            // Enhanced modal focus trap
+            document.addEventListener('keydown', (e) => {
+                const activeModal = document.querySelector('.modal.active');
+                if (activeModal && e.key === 'Tab') {
+                    trapFocus(e, activeModal);
+                }
+            });
+        }
+
+        function trapFocus(e, modal) {
+            const focusableElements = modal.querySelectorAll(
+                'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+            
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+                if (document.activeElement === firstFocusable) {
+                    lastFocusable.focus();
+                    e.preventDefault();
+                }
+            } else {
+                if (document.activeElement === lastFocusable) {
+                    firstFocusable.focus();
+                    e.preventDefault();
+                }
+            }
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal.active').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+
+        function showKeyboardHelp(persistent = false) {
+            let helpDiv = document.getElementById('keyboard-help');
+            if (!helpDiv) {
+                helpDiv = document.createElement('div');
+                helpDiv.id = 'keyboard-help';
+                helpDiv.className = 'keyboard-help';
+                helpDiv.innerHTML = `
+                    <strong>Scorciatoie da tastiera:</strong><br>
+                    <kbd>Ctrl+F</kbd> Cerca prompt<br>
+                    <kbd>Ctrl+N</kbd> Nuovo prompt<br>
+                    <kbd>Ctrl+S</kbd> Esporta dati<br>
+                    <kbd>Esc</kbd> Chiudi modal<br>
+                    <kbd>1-9</kbd> Seleziona categoria<br>
+                    <kbd>O</kbd> Apri overlay<br>
+                    <kbd>H</kbd>/<kbd>?</kbd> Mostra aiuto<br>
+                    <small>Tab per navigare, Enter per attivare</small>
+                `;
+                document.body.appendChild(helpDiv);
+            }
+            
+            helpDiv.classList.add('show');
+            
+            if (!persistent) {
+                setTimeout(() => {
+                    helpDiv.classList.remove('show');
+                }, 4000);
+            } else {
+                // Click to dismiss
+                helpDiv.addEventListener('click', () => {
+                    helpDiv.classList.remove('show');
+                }, { once: true });
+                
+                setTimeout(() => {
+                    helpDiv.classList.remove('show');
+                }, 10000);
+            }
+        }
+
+        // Enhanced functions with better keyboard support
+        function openAddPromptModal() {
+            const select = document.getElementById('promptCategory');
+            select.innerHTML = data.categories.map(cat => 
+                `<option value="${escapeHtml(cat.id)}">${escapeHtml(cat.name)}</option>`
+            ).join('');
+            document.getElementById('addPromptModal').classList.add('active');
+
+            // Focus first input
+            setTimeout(() => {
+                document.getElementById('promptTitle').focus();
+            }, 100);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            
+            // Return focus to trigger element or search bar
+            const searchBar = document.getElementById('searchBar');
+            if (searchBar) searchBar.focus();
+            
+            // Reset forms
+            if (modalId === 'addPromptModal') {
+                document.getElementById('addPromptForm').reset();
+            } else if (modalId === 'editPromptModal') {
+                document.getElementById('editPromptForm').reset();
+            } else if (modalId === 'addCategoryModal') {
+                document.getElementById('addCategoryForm').reset();
+            }
+        }
+    </script>
+</body>
+</html>

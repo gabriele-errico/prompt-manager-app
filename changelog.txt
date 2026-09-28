@@ -1,0 +1,57 @@
+# 📝 CHANGELOG - Prompt Manager
+
+## ✅ Modifiche Completate
+
+### v1.4 - Nuova repository pubblica
+- ✅ **Librerie di prompt** esterne collegate nella barra laterale e nel README
+- ✅ `index.html` per aprire l'app dall'indirizzo breve di GitHub Pages
+- ✅ Prompt di esempio anonimizzati
+
+### v1.3 - Overlay integrato (unione con PromptOverlay)
+- ✅ **📌 Overlay** (pulsante in alto o tasto `O`): finestra compatta sempre in primo piano
+  con i **preferiti** da copiare con un clic e i **box di testo** liberi
+  (Copia, Pulisci, 💾 Salva nella libreria, + Aggiungi box, × per i box extra)
+- ✅ I box dell'overlay restano salvati anche chiudendo la finestra
+- ✅ L'overlay segue il tema chiaro/scuro dell'app
+- ✅ Sempre in primo piano su Chrome/Edge desktop; negli altri browser si apre come finestra normale
+
+### v1.2 - Categorie, backup e pulizia
+- ✅ **Rinomina/elimina categorie** dai pulsanti nell'intestazione di ogni categoria
+  (eliminando una categoria i prompt non si perdono: finiscono in "Senza Categoria")
+- ✅ **Nomi categoria duplicati** bloccati
+- ✅ **Ricerca per categoria** oltre a titolo e contenuto
+- ✅ **Promemoria backup** se ci sono modifiche non esportate da 7+ giorni
+- ✅ **Storage persistente** richiesto al browser (evita la cancellazione automatica dei dati)
+- ✅ **Service worker semplificato**: solo cache offline dei file dell'app
+
+### v1.1 - Correzione bug
+- ✅ Prompt con tag (`<instructions>`, HTML) mostrati come testo
+- ✅ Barra di ricerca: si possono digitare "h", "?" e le cifre
+- ✅ Ricerca mantenuta dopo cambio categoria e modifiche
+- ✅ Contatore preferiti corretto dopo l'eliminazione di un prompt
+- ✅ Bottone Copia con conferma visiva e fallback senza Clipboard API
+- ✅ Modal non più chiuso selezionando testo col trascinamento
+- ✅ Import con conferma prima di sovrascrivere
+- ✅ Layout mobile senza scroll orizzontale
+- ✅ Modalità offline e icone PWA funzionanti
+
+### v1.0 - Prima versione
+- ✅ **Gestione prompt**: aggiungi, modifica, elimina, copia negli appunti
+- ✅ **Categorie** personalizzate
+- ✅ **Preferiti** con filtro e contatore in sidebar
+- ✅ **Ricerca** per titolo e contenuto
+- ✅ **Export/Import JSON** (backup manuale)
+- ✅ **Tema chiaro/scuro**
+- ✅ **Scorciatoie da tastiera** (Ctrl+F, Ctrl+N, Ctrl+S, Esc, 1-9, H)
+- ✅ **Contatori** prompt e categorie
+- ✅ **Installabile come app (PWA)** e utilizzabile offline
+
+### Limiti attuali
+- I dati sono salvati solo nel browser in uso (localStorage): per usarli su un
+  altro dispositivo o browser serve Export/Import
+- Nessuna cronologia delle modifiche, nessun tag, nessuna operazione su più prompt insieme
+
+---
+
+## 🔄 Roadmap Futura
+Vedi `todo-active.txt`.
